@@ -34,7 +34,7 @@ do
 end
 
 --// SETTINGS & CONFIG MANAGER SYSTEM
-local ConfigFile = "LunaHub_Config.json"
+local ConfigFile = "LunaHub_Configs.json"
 local isResetting = false
 
 local ConfigData = {
