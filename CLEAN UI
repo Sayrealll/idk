@@ -1,0 +1,873 @@
+--// SERVICES FOR UI & CONFIG
+local cloneref = (cloneref or clonereference or function(instance)
+	return instance
+end)
+
+local ReplicatedStorage = cloneref(game:GetService("ReplicatedStorage"))
+local RunService = cloneref(game:GetService("RunService"))
+local HttpService = cloneref(game:GetService("HttpService"))
+
+--// WINDUI INITIALIZATION
+local WindUI
+
+do
+	local ok, result = pcall(function()
+		return require("./src/Init")
+	end)
+
+	if ok then
+		WindUI = result
+	else
+		if RunService:IsStudio() or not writefile then
+			WindUI = require(
+				ReplicatedStorage:WaitForChild("WindUI"):WaitForChild("Init")
+			)
+		else
+			WindUI =
+				loadstring(
+					game:HttpGet(
+						"https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"
+					)
+				)()
+		end
+	end
+end
+
+--// SETTINGS & CONFIG MANAGER SYSTEM
+local ConfigFile = "LunaHub_Config.json"
+local isResetting = false
+
+local ConfigData = {
+	SelectedEggs = {},
+	SelectedRarities = {},
+	SelectedPlaceEgg = {},
+	SelectedPlaceRarities = {},
+	AutoPickup = false,
+	AutoVolcanoDip = false,
+	AutoPlaceEgg = false,
+	AutoHatchEgg = false,
+	AutoUpgradeHatchLuck = false,
+	AutoUpgradeHatchLuckMax = false,
+	AutoRebirth = false,
+	AutoClaimIndex = false,
+	AutoClaimOffline = false,
+	SelectedGear = {},
+	Autobuygear = false,
+	SelectedFood = {},
+	AutoSellAllPets = false,    
+	SelectedPetToSell = {},
+	SelectedSellRarities = {},
+	Autobuyfood = false,
+	SelectedESPEggs = {},
+	SelectedESPRarities = {},
+	FPSBoost = false,
+	AutoSellPet = false,
+	AutoEquipBestPet = false,
+	ESPEnabled = false,
+	SelectedFavPet = {},
+	HideEggs = false,
+	AutoFavoritePet = false
+}
+
+local function LoadConfig()
+	if isfile and readfile and isfile(ConfigFile) then
+		local success, result = pcall(function()
+			return HttpService:JSONDecode(readfile(ConfigFile))
+		end)
+		if success and type(result) == "table" then
+			for k, v in pairs(result) do
+				ConfigData[k] = v
+			end
+		end
+	end
+end
+
+local function SaveConfig()
+	if isResetting then return end
+	if writefile then
+		pcall(function()
+			writefile(ConfigFile, HttpService:JSONEncode(ConfigData))
+		end)
+	end
+end
+
+LoadConfig()
+
+local ThemeName = "Dark"
+
+-- MULTI-SELECT TABLES (CONFIG REFERENCE)
+local SelectedEggs = ConfigData.SelectedEggs or {}
+local SelectedRarities = ConfigData.SelectedRarities or {}
+local SelectedPlaceEgg = ConfigData.SelectedPlaceEgg or {}
+local SelectedPlaceRarities = ConfigData.SelectedPlaceRarities or {}
+local SelectedESPEggs = ConfigData.SelectedESPEggs or {}
+local SelectedESPRarities = ConfigData.SelectedESPRarities or {}
+local SelectedGear = ConfigData.SelectedGear or {}
+local SelectedFood = ConfigData.SelectedFood or {}
+local SelectedPetToSell = ConfigData.SelectedPetToSell or {}
+local SelectedSellRarities = ConfigData.SelectedSellRarities or {}
+local SelectedFavPet = ConfigData.SelectedFavPet or {}
+
+-- TOGGLES (CONFIG REFERENCE)
+local AutoPickup = ConfigData.AutoPickup or false
+local AutoVolcanoDip = ConfigData.AutoVolcanoDip or false
+local HideEggs = ConfigData.HideEggs or false
+local AutoPlaceEgg = ConfigData.AutoPlaceEgg or false
+local AutoHatchEgg = ConfigData.AutoHatchEgg or false
+local AutoClaimIndex = ConfigData.AutoClaimIndex or false
+local AutoClaimOffline = ConfigData.AutoClaimOffline or false
+local AutoUpgradeHatchLuck = ConfigData.AutoUpgradeHatchLuck or false
+local AutoUpgradeHatchLuckMax = ConfigData.AutoUpgradeHatchLuckMax or false
+local AutoRebirth = ConfigData.AutoRebirth or false
+local ESPEnabled = ConfigData.ESPEnabled or false
+local Autobuygear = ConfigData.Autobuygear or false
+local Autobuyfood = ConfigData.Autobuyfood or false
+local FPSBoost = ConfigData.FPSBoost or false
+local AutoEquipBestPet = ConfigData.AutoEquipBestPet or false
+local AutoSellPet = ConfigData.AutoSellPet or false
+local AutoSellAllPets = ConfigData.AutoSellAllPets or false
+local AutoFavoritePet = ConfigData.AutoFavoritePet or false
+
+-- UI ELEMENT REFERENCES FOR RESET SYSTEM
+local UIElements = {}
+
+local function SetUIValue(element, newValue)
+	if not element then return end
+	pcall(function()
+		if element.Set then
+			element:Set(newValue)
+		elseif element.SetValue then
+			element:SetValue(newValue)
+		elseif element.Value ~= nil then
+			element.Value = newValue
+		end
+	end)
+end
+
+-- DATA LISTS FOR UI DROPDOWNS
+local EggNames = {
+	"Volcanic Egg", "Cherub Egg", "Solaris Egg", "Blackhole Egg", "Bloom Egg",
+	"Galaxy Egg", "Aurora Egg", "Tidal Egg", "Soul Egg", "Sinister Egg",
+	"Flaming Egg", "Dominus Egg", "Asteroid Egg", "Skull Egg", "Crystal Egg",
+	"Diamond Egg", "Golden Egg", "Glass Egg", "Ice Egg", "Slime Egg",
+	"Flower Egg", "Mushroom Egg", "Leaf Egg", "Stone Egg", "Easter Egg",
+	"Cracked Egg", "Brown Egg", "White Egg"
+}
+
+local RarityNames = {
+	"Ethereal", "Divine", "Mythic", "Legendary", "Epic", "Rare", "Common"
+}
+
+local GearShop = {
+	"Advanced Radar", "Jewel Radar", "Royal Radar",
+	"Magic Radar", "Angelic Radar", "Eternal Radar"
+}
+
+local FoodShop = {
+	"Grass", "Bone", "Meat", "Magic Apple", "Dragon Fruit"
+}
+
+local PET_LIST = {
+	"Snail", "Turtle", "Sloth", "Axolotl", "Koala", "Capybara", "Chicken",
+	"Pig", "Elephant", "Panda", "Kangaroo", "Deer", "Spider", "Crocodile",
+	"Gorilla", "Snake", "Horse", "Wolf", "Shark", "Platypus", "Lion",
+	"Ostrich", "Fox", "Boar", "Giraffe", "Cheetah", "Monkey", "Unicorn",
+	"Flamingo", "TRex", "Phoenix", "Peacock", "Cerberus", "Komodo", "Kitsune",
+	"Dragon", "Griffin"
+}
+
+--==================================================
+-- WINDOW CREATION
+--==================================================
+
+local Window = WindUI:CreateWindow({
+	Title = "LUNA HUB",
+	Author = "RIDE A PET",
+	Theme = ThemeName,
+
+	ToggleKey = Enum.KeyCode.F,
+	OpenButton = {
+		Enabled = true,
+		OnlyMobile = false
+	},
+})
+
+Window:Tag({
+	Title = "v.1.0.0.8",
+	Color = "ElementBackground",
+})
+
+--==================================================
+-- TABS
+--==================================================
+
+local Tab1 = Window:Tab({ Title = "HOME", Icon = "warehouse" })
+local Tab2 = Window:Tab({ Title = "FARM", Icon = "egg" })
+local Tab3 = Window:Tab({ Title = "SHOP", Icon = "shopping-cart" })
+local Tab4 = Window:Tab({ Title = "VISUAL", Icon = "eye" })
+local Tab5 = Window:Tab({ Title = "Tracker", Icon = "radar" })
+local Tab6 = Window:Tab({ Title = "CONFIG", Icon = "file-cog" })
+local Tab7 = Window:Tab({ Title = "SETTINGS", Icon = "settings" })
+
+--==================================================
+-- TAB 1 (HOME)
+--==================================================
+
+Tab1:Paragraph({
+	Title = "Discord",
+	Desc = "Join our Discord Community",
+
+	Buttons = {
+		{
+			Title = "Discord",
+			Callback = function()
+				-- Empty Callback
+			end,
+		},
+	},
+})
+
+local HomeSection1 = Tab1:Section({
+	Title = "Teleport",
+	Icon = "compass",
+	Box = true,
+	BoxBorder = true,
+})
+
+HomeSection1:Button({
+	Title = "TP TO MARKET",
+	Justify = "Center",
+	Icon = "",
+	Callback = function() end,
+})
+
+HomeSection1:Button({
+	Title = "TP TO VOLCANO ENTRANCE",
+	Justify = "Center",
+	Icon = "",
+	Callback = function() end,
+})
+
+HomeSection1:Button({
+	Title = "TP TO MY PLOT",
+	Justify = "Center",
+	Icon = "",
+	Callback = function() end,
+})
+
+--==================================================
+-- TAB 2 (FARM)
+--==================================================
+
+local EggSection = Tab2:Section({
+	Title = "Auto Farm",
+	Icon = "egg",
+	Box = true,
+	BoxBorder = true,
+})
+
+UIElements.SelectedRarities = EggSection:Dropdown({
+	Title = "Rarity Filter",
+	Desc = "Choose rarity to auto farm",
+	Values = RarityNames,
+	Multi = true,
+	Value = ConfigData.SelectedRarities,
+	AllowNone = true,
+
+	Callback = function(value)
+		SelectedRarities = value
+		ConfigData.SelectedRarities = value
+		SaveConfig()
+	end,
+})
+
+UIElements.SelectedEggs = EggSection:Dropdown({
+	Title = "Category Filter",
+	Desc = "Choose category to auto farm",
+	Values = EggNames,
+	Multi = true,
+	Value = ConfigData.SelectedEggs,
+	AllowNone = true,
+
+	Callback = function(value)
+		SelectedEggs = value
+		ConfigData.SelectedEggs = value
+		SaveConfig()
+	end,
+})
+
+UIElements.AutoVolcanoDip = EggSection:Toggle({
+	Title = "Auto Volcano Dip",
+	Desc = "Dips picked up egg into Volcano Lava before bringing to plot",
+	Value = ConfigData.AutoVolcanoDip,
+
+	Callback = function(value)
+		AutoVolcanoDip = value
+		ConfigData.AutoVolcanoDip = value
+		SaveConfig()
+	end,
+})
+
+UIElements.AutoPickup = EggSection:Toggle({
+	Title = "Auto Farm",
+	Desc = "Automatically get the egg and proceed to your plot",
+	Value = ConfigData.AutoPickup,
+
+	Callback = function(value)
+		AutoPickup = value
+		ConfigData.AutoPickup = value
+		SaveConfig()
+	end,
+})
+
+local EggSection1 = Tab2:Section({
+	Title = "Auto Place & Hatch",
+	Icon = "sparkles",
+	Box = true,
+	BoxBorder = true,
+})
+
+UIElements.SelectedPlaceRarities = EggSection1:Dropdown({
+	Title = "Rarity Filter",
+	Desc = "Choose rarity to place in your plot",
+	Values = RarityNames,
+	Multi = true,
+	Value = ConfigData.SelectedPlaceRarities,
+	AllowNone = true,
+	Callback = function(value)
+		SelectedPlaceRarities = value
+		ConfigData.SelectedPlaceRarities = value
+		SaveConfig()
+	end,
+})
+
+UIElements.SelectedPlaceEgg = EggSection1:Dropdown({
+	Title = "Category Filter",
+	Desc = "Choose category to place in your plot",
+	Values = EggNames,
+	Multi = true,
+	Value = ConfigData.SelectedPlaceEgg,
+	AllowNone = true,
+	Callback = function(value)
+		SelectedPlaceEgg = value
+		ConfigData.SelectedPlaceEgg = value
+		SaveConfig()
+	end,
+})
+
+UIElements.AutoPlaceEgg = EggSection1:Toggle({
+	Title = "Auto Place Eggs",
+	Desc = "Automatically place the selected eggs in your plot",
+	Value = ConfigData.AutoPlaceEgg,
+
+	Callback = function(value)
+		AutoPlaceEgg = value
+		ConfigData.AutoPlaceEgg = value
+		SaveConfig()
+	end,
+})
+
+UIElements.AutoHatchEgg = EggSection1:Toggle({
+	Title = "Auto Hatch Egg",
+	Desc = "Automatically hatch ready eggs in your plot",
+	Value = ConfigData.AutoHatchEgg,
+
+	Callback = function(value)
+		AutoHatchEgg = value
+		ConfigData.AutoHatchEgg = value
+		SaveConfig()
+	end,
+})
+
+UIElements.AutoEquipBestPet = EggSection1:Toggle({
+	Title = "Auto Equip Best Pet",
+	Desc = "Automatically equip the best pet (go to your plot)",
+	Value = ConfigData.AutoEquipBestPet,
+
+	Callback = function(value)
+		AutoEquipBestPet = value
+		ConfigData.AutoEquipBestPet = value
+		SaveConfig()
+	end,
+})
+
+local EggSection2 = Tab2:Section({
+	Title = "Upgrades",
+	Icon = "trending-up",
+	Box = true,
+	BoxBorder = true,
+})
+
+UIElements.AutoUpgradeHatchLuck = EggSection2:Toggle({
+	Title = "Auto Upgrade Hatch Luck",
+	Desc = "Automatically upgrade hatch luck by 1x",
+	Value = ConfigData.AutoUpgradeHatchLuck,
+
+	Callback = function(value)
+		AutoUpgradeHatchLuck = value
+		ConfigData.AutoUpgradeHatchLuck = value
+		SaveConfig()
+	end,
+})
+
+UIElements.AutoUpgradeHatchLuckMax = EggSection2:Toggle({
+	Title = "Auto Upgrade Hatch Luck (Max)",
+	Desc = "Automatically upgrade hatch luck by max",
+	Value = ConfigData.AutoUpgradeHatchLuckMax,
+
+	Callback = function(value)
+		AutoUpgradeHatchLuckMax = value
+		ConfigData.AutoUpgradeHatchLuckMax = value
+		SaveConfig()
+	end,
+})
+
+UIElements.AutoRebirth = EggSection2:Toggle({
+	Title = "Auto Rebirth",
+	Value = ConfigData.AutoRebirth,
+
+	Callback = function(value)
+		AutoRebirth = value
+		ConfigData.AutoRebirth = value
+		SaveConfig()
+	end,
+})
+
+UIElements.AutoClaimIndex = EggSection2:Toggle({
+	Title = "Auto Claim Index Reward",
+	Value = ConfigData.AutoClaimIndex,
+
+	Callback = function(value)
+		AutoClaimIndex = value
+		ConfigData.AutoClaimIndex = value
+		SaveConfig()
+	end,
+})
+
+UIElements.AutoClaimOffline = EggSection2:Toggle({
+	Title = "Auto Claim Offline Rewards",
+	Value = ConfigData.AutoClaimOffline,
+
+	Callback = function(value)
+		AutoClaimOffline = value
+		ConfigData.AutoClaimOffline = value
+		SaveConfig()
+	end,
+})
+
+--==================================================
+-- TAB 3 (SHOP)
+--==================================================
+
+local ShopSection = Tab3:Section({
+	Title = "Gear Shop",
+	Icon = "wrench",
+	Box = true,
+	BoxBorder = true,
+})
+
+UIElements.SelectedGear = ShopSection:Dropdown({
+	Title = "Select Radars",
+	Values = GearShop,
+	Multi = true,
+	Value = ConfigData.SelectedGear,
+	AllowNone = true,
+
+	Callback = function(value)
+		SelectedGear = value
+		ConfigData.SelectedGear = value
+		SaveConfig()
+	end,
+})
+
+UIElements.Autobuygear = ShopSection:Toggle({
+	Title = "Auto Buy Gears",
+	Desc = "Automatically buy selected gear",
+	Value = ConfigData.Autobuygear,
+
+	Callback = function(value)
+		Autobuygear = value
+		ConfigData.Autobuygear = value
+		SaveConfig()
+	end,
+})
+
+local ShopSection1 = Tab3:Section({
+	Title = "Food Shop",
+	Icon = "apple",
+	Box = true,
+	BoxBorder = true,
+})
+
+UIElements.SelectedFood = ShopSection1:Dropdown({
+	Title = "Select Food",
+	Values = FoodShop,
+	Multi = true,
+	Value = ConfigData.SelectedFood,
+	AllowNone = true,
+
+	Callback = function(value)
+		SelectedFood = value
+		ConfigData.SelectedFood = value
+		SaveConfig()
+	end,
+})
+
+UIElements.Autobuyfood = ShopSection1:Toggle({
+	Title = "Auto Buy Foods",
+	Desc = "Automatically buy selected food",
+	Value = ConfigData.Autobuyfood,
+
+	Callback = function(value)
+		Autobuyfood = value
+		ConfigData.Autobuyfood = value
+		SaveConfig()
+	end,
+})
+
+local ShopSection2 = Tab3:Section({
+	Title = "Sell Shop",
+	Icon = "dollar-sign",
+	Box = true,
+	BoxBorder = true,
+})
+
+UIElements.SelectedSellRarities = ShopSection2:Dropdown({
+	Title = "Rarity Filter",
+	Desc = "Choose rarity to auto sell",
+	Values = RarityNames,
+	Multi = true,
+	Value = ConfigData.SelectedSellRarities,
+	AllowNone = true,
+
+	Callback = function(value)
+		SelectedSellRarities = value
+		ConfigData.SelectedSellRarities = SelectedSellRarities
+		SaveConfig()
+	end,
+})
+
+UIElements.SelectedPetToSell = ShopSection2:Dropdown({
+	Title = "Category Filter",
+	Desc = "Choose category to auto sell",
+	Values = PET_LIST,
+	Multi = true,
+	Value = ConfigData.SelectedPetToSell,
+	AllowNone = true,
+
+	Callback = function(value)
+		SelectedPetToSell = value
+		ConfigData.SelectedPetToSell = SelectedPetToSell
+		SaveConfig()
+	end,
+})
+
+UIElements.AutoSellPet = ShopSection2:Toggle({
+	Title = "Auto Sell Pets",
+	Desc = "Automatically sell selected pets",
+	Value = ConfigData.AutoSellPet,
+
+	Callback = function(value)
+		AutoSellPet = value
+		ConfigData.AutoSellPet = value
+		SaveConfig()
+	end,
+})
+
+UIElements.AutoSellAllPets = ShopSection2:Toggle({
+	Title = "Auto Sell All Pets",
+	Desc = "Automatically sell all pets in inventory",
+	Value = ConfigData.AutoSellAllPets,
+
+	Callback = function(value)
+		AutoSellAllPets = value
+		ConfigData.AutoSellAllPets = value
+		SaveConfig()
+	end,
+})
+
+local FavSection = Tab3:Section({
+	Title = "Favorite Pet",
+	Icon = "heart",
+	Box = true,
+	BoxBorder = true,
+})
+
+UIElements.SelectedFavPet = FavSection:Dropdown({
+	Title = "Select Pet to Favorite",
+	Desc = "Choose which pets to auto favorite",
+	Values = PET_LIST,
+	Multi = true,
+	Value = ConfigData.SelectedFavPet,
+	AllowNone = true,
+
+	Callback = function(value)
+		SelectedFavPet = value
+		ConfigData.SelectedFavPet = value
+		SaveConfig()
+	end,
+})
+
+UIElements.AutoFavoritePet = FavSection:Toggle({
+	Title = "Auto Favorite Pet",
+	Desc = "Automatically favorites selected pets then stops when finished",
+	Value = ConfigData.AutoFavoritePet,
+
+	Callback = function(value)
+		AutoFavoritePet = value
+		ConfigData.AutoFavoritePet = value
+		SaveConfig()
+	end,
+})
+
+--==================================================
+-- TAB 4 (VISUAL)
+--==================================================
+
+local VisualSection = Tab4:Section({
+	Title = "ESP Settings",
+	Icon = "eye",
+	Box = true,
+	BoxBorder = true,
+})
+
+UIElements.SelectedESPRarities = VisualSection:Dropdown({
+	Title = "Rarity Filter",
+	Desc = "Choose rarity to display ESP",
+	Values = RarityNames,
+	Multi = true,
+	Value = ConfigData.SelectedESPRarities,
+	AllowNone = true,
+
+	Callback = function(value)
+		SelectedESPRarities = value
+		ConfigData.SelectedESPRarities = value
+		SaveConfig()
+	end,
+})
+
+UIElements.SelectedESPEggs = VisualSection:Dropdown({
+	Title = "Category Filter",
+	Desc = "Choose category to display ESP",
+	Values = EggNames,
+	Multi = true,
+	Value = ConfigData.SelectedESPEggs,
+	AllowNone = true,
+
+	Callback = function(value)
+		SelectedESPEggs = value
+		ConfigData.SelectedESPEggs = value
+		SaveConfig()
+	end,
+})
+
+UIElements.ESPEnabled = VisualSection:Toggle({
+	Title = "Egg ESP",
+	Desc = "Enable esp and distance for selected eggs",
+	Value = ConfigData.ESPEnabled,
+
+	Callback = function(value)
+		ESPEnabled = value
+		ConfigData.ESPEnabled = value
+		SaveConfig()
+	end,
+})
+
+--==================================================
+-- TAB 5 (TRACKER)
+--==================================================
+
+local EggsSection = Tab5:Section({
+	Title = "Egg Tracker",
+	Icon = "radar",
+	Box = true,
+	BoxBorder = true,
+})
+
+local LiveEggParagraph = EggsSection:Paragraph({
+	Title = "Tracked Eggs (0)",
+	Desc = "Scanning workspace for rendered eggs...",
+})
+
+--==================================================
+-- TAB 6 (CONFIG)
+--==================================================
+
+local ConfigSection = Tab6:Section({
+	Title = "Config",
+	Icon = "file-cog",
+	Box = true,
+	BoxBorder = true,
+})
+
+ConfigSection:Button({
+	Title = "Reset Config",
+	Desc = "Reset all your saved configurations",
+
+	Callback = function()
+		isResetting = true
+
+		if delfile and isfile and isfile(ConfigFile) then
+			pcall(function() delfile(ConfigFile) end)
+		end
+
+		SelectedEggs = {}
+		SelectedRarities = {}
+		SelectedPlaceEgg = {}
+		SelectedPlaceRarities = {}
+		SelectedPetToSell = {}
+		SelectedSellRarities = {}
+		SelectedFavPet = {}
+		AutoPickup = false
+		AutoVolcanoDip = false
+		AutoPlaceEgg = false
+		AutoHatchEgg = false
+		AutoUpgradeHatchLuck = false
+		AutoUpgradeHatchLuckMax = false
+		AutoRebirth = false
+		AutoClaimIndex = false
+		AutoClaimOffline = false
+		SelectedGear = {}
+		Autobuygear = false
+		SelectedFood = {}
+		Autobuyfood = false
+		SelectedESPEggs = {}
+		SelectedESPRarities = {}
+		ESPEnabled = false
+		FPSBoost = false
+		AutoSellPet = false
+		AutoSellAllPets = false
+		AutoEquipBestPet = false
+		HideEggs = false
+		AutoFavoritePet = false
+
+		ConfigData = {
+			SelectedEggs = {},
+			SelectedRarities = {},
+			SelectedPlaceEgg = {},
+			SelectedPlaceRarities = {},
+			AutoPickup = false,
+			AutoVolcanoDip = false,
+			AutoPlaceEgg = false,
+			AutoHatchEgg = false,
+			AutoUpgradeHatchLuck = false,
+			AutoUpgradeHatchLuckMax = false,
+			AutoRebirth = false,
+			AutoClaimIndex = false,
+			AutoClaimOffline = false,
+			SelectedGear = {},
+			Autobuygear = false,
+			SelectedFood = {},
+			SelectedPetToSell = {},
+			SelectedSellRarities = {},
+			Autobuyfood = false,
+			SelectedESPEggs = {},
+			SelectedESPRarities = {},
+			ESPEnabled = false,
+			AutoEquipBestPet = false,
+			AutoSellPet = false,
+			AutoSellAllPets = false,
+			FPSBoost = false,
+			SelectedFavPet = {},
+			HideEggs = false,
+			AutoFavoritePet = false
+		}
+
+		SetUIValue(UIElements.SelectedRarities, {})
+		SetUIValue(UIElements.SelectedEggs, {})
+		SetUIValue(UIElements.AutoPickup, false)
+		SetUIValue(UIElements.AutoVolcanoDip, false)
+		SetUIValue(UIElements.SelectedPlaceEgg, {})
+		SetUIValue(UIElements.SelectedPlaceRarities, {})
+		SetUIValue(UIElements.AutoPlaceEgg, false)
+		SetUIValue(UIElements.AutoHatchEgg, false)
+		SetUIValue(UIElements.AutoUpgradeHatchLuck, false)
+		SetUIValue(UIElements.AutoUpgradeHatchLuckMax, false)
+		SetUIValue(UIElements.AutoRebirth, false)
+		SetUIValue(UIElements.AutoClaimIndex, false)
+		SetUIValue(UIElements.AutoClaimOffline, false)
+		SetUIValue(UIElements.SelectedGear, {})
+		SetUIValue(UIElements.Autobuygear, false)
+		SetUIValue(UIElements.SelectedFood, {})
+		SetUIValue(UIElements.SelectedPetToSell, {})
+		SetUIValue(UIElements.SelectedSellRarities, {})
+		SetUIValue(UIElements.Autobuyfood, false)
+		SetUIValue(UIElements.SelectedESPEggs, {})
+		SetUIValue(UIElements.SelectedESPRarities, {})
+		SetUIValue(UIElements.ESPEnabled, false)
+		SetUIValue(UIElements.FPSBoost, false)
+		SetUIValue(UIElements.AutoSellPet, false)
+		SetUIValue(UIElements.AutoSellAllPets, false)
+		SetUIValue(UIElements.AutoEquipBestPet, false)
+		SetUIValue(UIElements.SelectedFavPet, {})
+		SetUIValue(UIElements.AutoFavoritePet, false)
+		SetUIValue(UIElements.HideEggs, false)
+
+		WindUI:Notify({
+			Title = "Config Reset",
+			Content = "All configurations have been reset to default!",
+			Icon = "solar:bell-bold",
+			Duration = 5,
+			CanClose = true,
+		})
+
+		task.wait(0.1)
+		isResetting = false
+	end,
+})
+
+--==================================================
+-- TAB 7 (SETTINGS)
+--==================================================
+
+local SettingsSection = Tab7:Section({
+	Title = "Performance",
+	Icon = "zap",
+	Box = true,
+	BoxBorder = true,
+})
+
+UIElements.FPSBoost = SettingsSection:Toggle({
+	Title = "FPS Boost",
+	Desc = "Lower graphics quality to increase FPS performance",
+	Value = ConfigData.FPSBoost,
+
+	Callback = function(value)
+		FPSBoost = value
+		ConfigData.FPSBoost = value
+		SaveConfig()
+	end,
+})
+
+UIElements.HideEggs = SettingsSection:Toggle({
+	Title = "Hide All Eggs",
+	Desc = "Hide all eggs in your plot and other players' plots",
+	Value = ConfigData.HideEggs,
+
+	Callback = function(value)
+		HideEggs = value
+		ConfigData.HideEggs = value
+		SaveConfig()
+	end,
+})
+
+local SettingsSection1 = Tab7:Section({
+	Title = "Servers",
+	Icon = "globe",
+	Box = true,
+	BoxBorder = true,
+})
+
+SettingsSection1:Button({
+	Title = "Rejoin",
+	Justify = "Center",
+	Icon = "",
+	Callback = function() end,
+})
+
+SettingsSection1:Button({
+	Title = "Server Hop",
+	Justify = "Center",
+	Icon = "",
+	Callback = function() end,
+})
